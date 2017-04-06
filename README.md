@@ -1,0 +1,1 @@
+Cloudformation Template for deploying Chef Automate
