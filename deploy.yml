@@ -12,6 +12,10 @@ Parameters:
     Type: String
     Default: 0.0.1
 
+  AvailabilityZone:
+    Description: AZ to deploy Automate cluster
+    Type: String
+
   # SSH keypair to inject into the instances
   KeyName:
     Description: Name of an existing ec2 KeyPair to enable SSH access
@@ -26,10 +30,19 @@ Parameters:
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
+## AMIs START ##
+
   zCurrentUbuntu:
     Type: String
     Default: ami-405f7226
     Description: AMI ID for current Ubuntu - this is 16.04 LTS
+
+  zworkstation:
+    Type: String
+    Default: ami-d3dee9b5
+    Description: AMI ID for the Windows workstation - this is Windows Server 2012 R2
+
+## AMIs END ##
 
   Prefix:
     Description: Tag for all servers deployed in the Automate cluster
@@ -121,7 +134,7 @@ Resources:
       AvailabilityZone: eu-west-1b
       VpcId:
         Ref: VPC
-      CidrBlock: 10.0.0.0/28
+      CidrBlock: 10.0.0.0/26
       Tags:
       - Key: Name
         Value: !Sub ${Prefix} Automate Cluster Subnet
@@ -204,5 +217,214 @@ Resources:
       NetworkAclId:
         Ref: NetworkAcl
 
-## VM CREATION ##
+AutomateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: Enable required ports for Automate cluster
+      SecurityGroupIngress:
 
+      # SSH
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: SSHLocation
+
+        # RDP
+      - IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: 0.0.0.0/0
+
+        # HTTPS
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+
+      - IpProtocol: icmp
+        FromPort: '8'
+        ToPort: "-1"
+        CidrIp: 0.0.0.0/0
+
+      - IpProtocol: udp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: 0.0.0.0/0
+
+        # WINRM
+      - IpProtocol: tcp
+        FromPort: '5985'
+        ToPort: '5986'
+        CidrIp: 0.0.0.0/0
+
+## VM CREATION ##
+    workstation:
+      Type: AWS::EC2::Instance
+      Properties:
+        InstanceType: m4.large
+        AvailabilityZone: eu-west-1b
+        BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeType: io1
+            Iops: '2500'
+            DeleteOnTermination: 'true'
+        NetworkInterfaces:
+        - GroupSet:
+          - Ref: AutomateSecurityGroup
+          AssociatePublicIpAddress: 'true'
+          PrivateIpAddress: 10.0.0.2
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Ref: SubnetDefault
+        KeyName:
+          Ref: KeyName
+        ImageId:
+          Ref: zworkstation
+        Tags:
+        - Key: Name
+          Value: !Sub ${Prefix} Automate Cluster workstation
+
+    orchestration:
+      Type: AWS::EC2::Instance
+      Properties:
+        InstanceType: t2.medium
+        AvailabilityZone: eu-west-1b
+        NetworkInterfaces:
+        - GroupSet:
+          - Ref: AutomateSecurityGroup
+          AssociatePublicIpAddress: 'false'
+          PrivateIpAddress: 10.0.0.4
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Ref: SubnetDefault
+        KeyName:
+          Ref: KeyName
+        ImageId:
+          Ref: zCurrentUbuntu
+        Tags:
+        - Key: Name
+          Value: !Sub ${Prefix} Automate Cluster orchestration server
+      
+    chefserver:
+      Type: AWS::EC2::Instance
+      Properties:
+        InstanceType: c3.large
+        AvailabilityZone: eu-west-1b
+        BlockDeviceMappings:
+          - DeviceName: "/dev/sda1"
+            Ebs:
+              VolumeSize: '50'
+              VolumeType: gp2
+              DeleteOnTermination: 'true'
+        NetworkInterfaces:
+        - GroupSet:
+          - Ref: AutomateSecurityGroup
+          AssociatePublicIpAddress: 'true'
+          PrivateIpAddress: 10.0.0.5
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Ref: SubnetDefault
+        KeyName:
+          Ref: KeyName
+        ImageId:
+          Ref: zCurrentUbuntu
+        Tags:
+        - Key: Name
+          Value: !Sub ${Prefix} Automate Cluster Chef server
+
+      
+    automateserver:
+      Type: AWS::EC2::Instance
+      Properties:
+        InstanceType: c3.xlarge
+        AvailabilityZone: eu-west-1b
+        BlockDeviceMappings:
+          - DeviceName: "/dev/sda1"
+            Ebs:
+              VolumeSize: '50'
+              VolumeType: gp2
+              DeleteOnTermination: 'true'
+        NetworkInterfaces:
+        - GroupSet:
+          - Ref: AutomateSecurityGroup
+          AssociatePublicIpAddress: 'true'
+          PrivateIpAddress: 10.0.0.6
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Ref: SubnetDefault
+        KeyName:
+          Ref: KeyName
+        ImageId:
+          Ref: zCurrentUbuntu
+        Tags:
+        - Key: Name
+          Value: !Sub ${Prefix} Automate Cluster Automate server
+
+      
+    complianceserver:
+      Type: AWS::EC2::Instance
+      Properties:
+        InstanceType: c3.large
+        AvailabilityZone: eu-west-1b
+        BlockDeviceMappings:
+          - DeviceName: "/dev/sda1"
+            Ebs:
+              VolumeSize: '50'
+              VolumeType: gp2
+              DeleteOnTermination: 'true'
+        NetworkInterfaces:
+        - GroupSet:
+          - Ref: AutomateSecurityGroup
+          AssociatePublicIpAddress: 'true'
+          PrivateIpAddress: 10.0.0.7
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Ref: SubnetDefault
+        KeyName:
+          Ref: KeyName
+        ImageId:
+          Ref: zCurrentUbuntu
+        Tags:
+        - Key: Name
+          Value: !Sub ${Prefix} Automate Cluster Compliance server
+
+## OUTPUTS ##
+  
+Outputs:
+  
+  workstationPubDNS:
+    Description: Public IP of the workstation
+    Value:
+      Fn::GetAtt:
+      - workstation
+      - PublicIP
+
+  chefserverPubDNS:
+    Description: Public IP of the Chef Server
+    Value:
+      Fn::GetAtt:
+      - chefserver
+      - PublicIP
+
+  automateserverPubDNS:
+    Description: Public IP of the Automate Server
+    Value:
+      Fn::GetAtt:
+      - automateserver
+      - PublicIP
+
+  complianceserverPubDNS:
+    Description: Public IP of the Compliance Server
+    Value:
+      Fn::GetAtt:
+      - complianceserver
+      - PublicIP
