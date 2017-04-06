@@ -115,7 +115,7 @@ Resources:
         Value: !Sub ${Prefix} Automate VPC
 
   # Subnets #
-  SubnetCluster:
+  SubnetDefault:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone: eu-west-1b
@@ -124,5 +124,46 @@ Resources:
       CidrBlock: 10.0.0.0/28
       Tags:
       - Key: Name
-        Value: !Sub  ${Prefix} Automate Cluster Subnet
+        Value: !Sub ${Prefix} Automate Cluster Subnet
+
+  # IGs and access and associations #
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Sub ${Prefix} Automate Cluster IG
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: !Sub ${Prefix} Automate Cluster RouteTable
+  Route:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+  SubnetRouteTableAssociationDefault:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetDefault
+      RouteTableId:
+        Ref: RouteTable
+  
 
