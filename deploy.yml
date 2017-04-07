@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Chef Automate Deployment Template - Version 0.0.8
+Description: Chef Automate Deployment Template - Version 0.1.0
 
 ## PARAMETERS SECTION ##
 
@@ -10,7 +10,7 @@ Parameters:
   Version:
     Description: Version of the automate-demo.json file
     Type: String
-    Default: 0.0.8
+    Default: 0.1.0
 
   # SSH keypair to inject into the instances
   KeyName:
@@ -378,8 +378,9 @@ Resources:
       BlockDeviceMappings:
       - DeviceName: "/dev/sda1"
         Ebs:
+          VolumeSize: '50'
           VolumeType: io1
-          Iops: '2500'
+          Iops: '2000'
           DeleteOnTermination: 'true'
       NetworkInterfaces:
       - GroupSet:
@@ -403,28 +404,28 @@ Resources:
 Outputs:
   
   workstationPubDNS:
-    Description: Public IP of the workstation
+    Description: Public DNS of the workstation
     Value:
       Fn::GetAtt:
       - workstation
       - PublicDnsName
 
   chefserverPubDNS:
-    Description: Public IP of the Chef Server
+    Description: Public DNS of the Chef Server
     Value:
       Fn::GetAtt:
       - chefserver
       - PublicDnsName
 
   automateserverPubDNS:
-    Description: Public IP of the Automate Server
+    Description: Public DNS of the Automate Server
     Value:
       Fn::GetAtt:
       - automateserver
       - PublicDnsName
 
   complianceserverPubDNS:
-    Description: Public IP of the Compliance Server
+    Description: Public DNS of the Compliance Server
     Value:
       Fn::GetAtt:
       - complianceserver
