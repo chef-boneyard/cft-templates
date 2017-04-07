@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Chef Automate Deployment Template - Version 0.1.0
+Description: Chef Automate Deployment Template - Version 0.1.1
 
 ## PARAMETERS SECTION ##
 
@@ -10,7 +10,7 @@ Parameters:
   Version:
     Description: Version of the automate-demo.json file
     Type: String
-    Default: 0.1.0
+    Default: 0.1.1
 
   # SSH keypair to inject into the instances
   KeyName:
@@ -261,6 +261,13 @@ Resources:
   orchestration:
     Type: AWS::EC2::Instance
     Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          sudo apt-get update
+          sudo apt-get -y install docker.io
+          ln -sf /usr/bin/docker.io /usr/local/bin/docker
+          docker run -p 4001:4001 -p 7001:7001 --name orchestration elcolio/etcd
       InstanceType: t2.medium
       AvailabilityZone: eu-west-1b
       NetworkInterfaces:
@@ -341,7 +348,7 @@ Resources:
 
     
   complianceserver:
-    DependsOn: automateserver
+    DependsOn: chefserver
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: c3.large
@@ -370,7 +377,7 @@ Resources:
         Value: !Sub ${Prefix} Automate Cluster Compliance server
 
   workstation:
-    DependsOn: complianceserver
+    DependsOn: chefserver
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: m4.large
