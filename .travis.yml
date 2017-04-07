@@ -1,0 +1,21 @@
+language: ruby
+
+git:
+  submodules: false
+
+before_install:
+  - echo "Installing test gems"
+  - gem install yaml-lint
+
+# skip install step 
+install: true
+
+script:
+  - yaml-lint deploy.yml
+
+after_success:
+  - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
+  - echo "Automate Deployment YAML validated"
+
+#notifications:
+#  slack: chefio:NjT9ciXFpaYefpwaFxS1n4LN
