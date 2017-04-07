@@ -27,4 +27,4 @@ after_success:
   - echo "Automate Deployment YAML linted"
 
 notifications:
-  slack: chefio:NjT9ciXFpaYefpwaFxS1n4LN
+  email: false
