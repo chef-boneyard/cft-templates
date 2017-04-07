@@ -1,0 +1,30 @@
+language: ruby
+
+git:
+  submodules: false
+
+env:
+  global:
+  - AWS_DEFAULT_REGION=eu-west-1
+  - secure: "bXwDiayAhALSEmWB7QexJIy7XUVkjBADyb1sUB4X4I/vRPBf3tpEwcXR+s/SygqG+ZvWfsZmBGR7rXoPd/Tdps2ym+ogNM+mHSxv9LVEJtFO+pK3G8IOYC6wb0SMw6YyangGo5EthwHop17u1ifdXkwCv1L6siP7I3YJHsMEoHA5088XCmp7p+E2sIW8m0IuWb79x0HsTBVEqHZOu2pJr2UJzM2dPWxqYKiCDyNdcFpW6zGRcKuwdkX496UKrbHOYyyVTRnmAaHetjIasTQLsWXV+qA1PMtzNNm9qdtmzhgrnBdzAKeCyWlsRk4v/YGVM8u5QlOxFdykU9rxXFfELyRk6w8wwh/GFVLLV/AY/grIFf3HN92QmigxrZAOZ/kfrofREWXzEFO6gvgUddNtBhZgv+KBsiKhGp2wUXiXDdM5978SnQFF6wKSNFvsbmI9gfGf+9wyBu2f45x+I9VcwE/gKt/IFOHPnXjknv1CBq8u4SgXOv43y2i+0WZWLZefGrj36teZ2LaJsXrsehYRVZhAHsqV7MpsmZd2xFzMAuvomx6piua23hdo8D0ICrCPVdYTOLUBhGnfp/JeactXdAeJR2smVh4RQwWbNIWb8XvQR4X1jXSqsAp3QN5oZcYO0s1+bWMpzAtWdvltDjYnESA5bPgEuJrR0dv2TMdDkZU="
+  - secure: "CnWdYh4RKVQOqsrRmRJDzx0TrpJwvIYldg03nsNWdK3KqzVlXGH44Jz970Y10wP3N7N9cB3F6eS2auTVycg/4Igqvb9dpL8Yd6xvgrKvRQxS0IiVQgX4NQhqBf8pehRVwFXHEK2RMPZvRG9RRpvek8MBqWPok7vw0GqfBn/kCXyn2+4auknbOLJFy5eFh8RMm54kDBzaa+UA8S1TER4xnMe9Gfg89k/rtLRWQS7dkGW6BmGNW81xyJIc7oZFDhHrU41m4PVWsWu4g84HxWRqdaJPgy8bHmuVw+aVeVhJ4a1hFsCd9znN/C/mawAQFG7u7tzT9uQPEN5Rp/HhBqYCEeeG5vCPy4tgpMW3p4A2GZd2b7QHDAnL1er5NMTz8G6tlrzd15b/KBgaapMuRo27EvmnuyzLzbWTjE1U74cO8JScepCR1+SqxtApZrJG3Qh2PFagdwTaOCnkWqnkm+eo4fPU2V6OZgG7kSbL5ScQ05RG5tC7RrBaHH6cIac+GkA+Uo4X0t0hHWC20LZwwjpegZ38aWJ+y8xzFyPSwWNc/QAC47uIG1dwH22hKGJqJLdBYF/08sDaOYrdKj5vCY/5nyK0iYIrBrW/P1bZdEwbgnhZQQLUtiNlber8WxmZC/GDH5uQra05q/Y2ftC0O8X5GwrXf9CWyyIjXYZzCYg3Eqg="
+
+before_install:
+  - echo "Installing AWS CLI"
+  - pip install --upgrade --user awscli
+  - echo "Installing test gems"
+  - gem install yaml-lint
+
+install: true
+
+script:
+  - aws cloudformation validate-template --template-body file://deploy.yml
+  - yaml-lint deploy.yml
+
+after_success:
+  - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
+  - echo "Cloudformation template validated"
+  - echo "Automate Deployment YAML linted"
+
+notifications:
+  email: false
