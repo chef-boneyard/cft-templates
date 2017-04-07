@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Chef Automate Deployment Template - Version 0.0.1
+Description: Chef Automate Deployment Template - Version 0.0.8
 
 ## PARAMETERS SECTION ##
 
@@ -10,7 +10,7 @@ Parameters:
   Version:
     Description: Version of the automate-demo.json file
     Type: String
-    Default: 0.0.1
+    Default: 0.0.8
 
   # SSH keypair to inject into the instances
   KeyName:
@@ -116,7 +116,7 @@ Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.0.0.0/28
+      CidrBlock: 10.0.0.0/16
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
       Tags:
@@ -130,7 +130,7 @@ Resources:
       AvailabilityZone: eu-west-1b
       VpcId:
         Ref: VPC
-      CidrBlock: 10.0.0.0/26
+      CidrBlock: 10.0.0.0/24
       Tags:
       - Key: Name
         Value: !Sub ${Prefix} Automate Cluster Subnet
@@ -385,7 +385,7 @@ Resources:
       - GroupSet:
         - Ref: AutomateSecurityGroup
         AssociatePublicIpAddress: 'true'
-        PrivateIpAddress: 10.0.0.2
+        PrivateIpAddress: 10.0.0.8
         DeviceIndex: '0'
         DeleteOnTermination: 'true'
         SubnetId:
