@@ -6,6 +6,7 @@ git:
 before_install:
   - echo "Installing AWS CLI"
   - pip install --upgrade --user awscli
+  - export AWS_DEFAULT_REGION=eu-west-1
   - echo "Installing test gems"
   - gem install yaml-lint
 
