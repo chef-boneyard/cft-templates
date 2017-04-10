@@ -46,8 +46,14 @@ Parameters:
     Default: my-company
 
   automateLicense:
-    Description: base64 encoded Automate license key
+    Description: gzipped and base64 encoded Automate license key
     Type: String
+
+  # Configuration script location
+  setupScriptUrl:
+    Description: Script that is responsible for configuring the Chef servers
+    Type: String
+    Default: https://raw.githubusercontent.com/chef-partners/arm-templates/russellseymour/script-aws-support/solutions/nested/scripts/setup-ctl.sh
 
   # Automate user parameters
   userName:
@@ -257,6 +263,12 @@ Resources:
         ToPort: '5986'
         CidrIp: 0.0.0.0/0
 
+        # Access to Etcd
+      - IpProtocol: tcp
+        FromPort: '4001'
+        ToPort: '4001'
+        CidrIp: 10.0.0.0/24
+
 ## VM CREATION ##
   orchestration:
     Type: AWS::EC2::Instance
@@ -267,13 +279,18 @@ Resources:
           sudo apt-get update
           sudo apt-get -y install docker.io
           ln -sf /usr/bin/docker.io /usr/local/bin/docker
-          docker run -p 4001:4001 -p 7001:7001 --name orchestration elcolio/etcd
+          docker run -p 4001:4001 -p 7001:7001 --name orchestration -d elcolio/etcd
+
+          cd /tmp
+          wget ${setupScriptUrl}
+          chmod u+x ./setup-ctl.sh
+          ./setup-ctl.sh -m orchestration
       InstanceType: t2.medium
       AvailabilityZone: eu-west-1b
       NetworkInterfaces:
       - GroupSet:
         - Ref: AutomateSecurityGroup
-        AssociatePublicIpAddress: 'false'
+        AssociatePublicIpAddress: 'true'
         PrivateIpAddress: 10.0.0.4
         DeviceIndex: '0'
         DeleteOnTermination: 'true'
@@ -291,6 +308,24 @@ Resources:
     DependsOn: orchestration
     Type: AWS::EC2::Instance
     Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # Get the local IP address, public DNS name and thus the hostname from user data
+          LOCAL_IPV4=`curl curl http://169.254.169.254/latest/meta-data/local-ipv4 2> /dev/null`
+          PUBLIC_DNSNAME=`curl http://169.254.169.254/latest/meta-data/public-hostname 2> /dev/null`
+          HOSTNAME=`echo $PUBLIC_DNSNAME | cut -d. -f 1`
+
+          # Set the hostname of the machine as well as the FQDN
+          echo $HOSTNAME > /etc/hostname
+          sed -i "s/^127\.0\.0\.1\s*localhost/127.0.0.1 $PUBLIC_DNSNAME $HOSTNAME/" /etc/hosts
+          hostname -F /etc/hostname
+
+          cd /tmp
+          wget ${setupScriptUrl}
+          chmod u+x ./setup-ctl.sh
+          ./setup-ctl.sh -m chef-install,chef-configure --chef-version ${chefVersion} -u ${userName} -f "${userFullname}" -p ${userPassword} -e ${userEmailaddress} -o ${chefOrg} -d ${chefOrgDescription} -O ${orchestration.PrivateIp}:4001 -w -c aws
       InstanceType: c3.large
       AvailabilityZone: eu-west-1b
       BlockDeviceMappings:
@@ -321,6 +356,27 @@ Resources:
     DependsOn: chefserver
     Type: AWS::EC2::Instance
     Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # Allow time for the chef server to complete
+          sleep 300
+
+          # Get the local IP address, public DNS name and thus the hostname from user data
+          LOCAL_IPV4=`curl curl http://169.254.169.254/latest/meta-data/local-ipv4 2> /dev/null`
+          PUBLIC_DNSNAME=`curl http://169.254.169.254/latest/meta-data/public-hostname 2> /dev/null`
+          HOSTNAME=`echo $PUBLIC_DNSNAME | cut -d. -f 1`
+
+          # Set the hostname of the machine as well as the FQDN
+          echo $HOSTNAME > /etc/hostname
+          sed -i "s/^127\.0\.0\.1\s*localhost/127.0.0.1 $PUBLIC_DNSNAME $HOSTNAME/" /etc/hosts
+          hostname -F /etc/hostname
+
+          cd /tmp
+          wget ${setupScriptUrl}
+          chmod u+x ./setup-ctl.sh
+          ./setup-ctl.sh -m automate-install,automate-configure --automate-version ${automateVersion} -O ${orchestration.PrivateIp}:4001 -L ${automateLicense} -s https://${chefserver.PublicDnsName}/organizations/${chefOrg} -u ${userName} -f "${userFullname}" -p ${userPassword} -e ${userEmailaddress}
       InstanceType: c3.xlarge
       AvailabilityZone: eu-west-1b
       BlockDeviceMappings:
@@ -351,6 +407,28 @@ Resources:
     DependsOn: chefserver
     Type: AWS::EC2::Instance
     Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # Allow time for the chef server to complete
+          sleep 300
+
+          # Get the local IP address, public DNS name and thus the hostname from user data
+          LOCAL_IPV4=`curl curl http://169.254.169.254/latest/meta-data/local-ipv4 2> /dev/null`
+          PUBLIC_DNSNAME=`curl http://169.254.169.254/latest/meta-data/public-hostname 2> /dev/null`
+          HOSTNAME=`echo $PUBLIC_DNSNAME | cut -d. -f 1`
+
+          # Set the hostname of the machine as well as the FQDN
+          echo $HOSTNAME > /etc/hostname
+          sed -i "s/^127\.0\.0\.1\s*localhost/127.0.0.1 $PUBLIC_DNSNAME $HOSTNAME/" /etc/hosts
+          hostname -F /etc/hostname
+
+          # Download the setup script and execute
+          cd /tmp
+          wget ${setupScriptUrl}
+          chmod u+x ./setup-ctl.sh 
+          ./setup-ctl.sh -m compliance-install,compliance-configure --compliance-version ${complianceVersion} -O ${orchestration.PrivateIp}:4001 -u ${userName} -p ${userPassword}
       InstanceType: c3.large
       AvailabilityZone: eu-west-1b
       BlockDeviceMappings:
