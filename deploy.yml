@@ -53,7 +53,7 @@ Parameters:
   setupScriptUrl:
     Description: Script that is responsible for configuring the Chef servers
     Type: String
-    Default: https://raw.githubusercontent.com/chef-partners/arm-templates/russellseymour/script-aws-support/solutions/nested/scripts/setup-ctl.sh
+    Default: https://raw.githubusercontent.com/chef-partners/arm-templates/master/solutions/nested/scripts/setup-ctl.sh
 
   # Automate user parameters
   userName:
@@ -325,7 +325,7 @@ Resources:
           cd /tmp
           wget ${setupScriptUrl}
           chmod u+x ./setup-ctl.sh
-          ./setup-ctl.sh -m chef-install,chef-configure --chef-version ${chefVersion} -u ${userName} -f "${userFullname}" -p ${userPassword} -e ${userEmailaddress} -o ${chefOrg} -d ${chefOrgDescription} -O ${orchestration.PrivateIp}:4001 -w -c aws
+          ./setup-ctl.sh -m chef-install,chef-configure --chef-version ${chefVersion} -u ${userName} -f "${userFullname}" -p ${userPassword} -e ${userEmailaddress} -o ${chefOrg} -d ${chefOrgDescription} -O ${orchestration.PrivateIp}:4001 -s https://$PUBLIC_DNSNAME/organizations/${chefOrg} -w 
       InstanceType: c3.large
       AvailabilityZone: eu-west-1b
       BlockDeviceMappings:
@@ -374,9 +374,13 @@ Resources:
           hostname -F /etc/hostname
 
           cd /tmp
+
+          # Download the license key
+          wget ${automateLicense}
+
           wget ${setupScriptUrl}
           chmod u+x ./setup-ctl.sh
-          ./setup-ctl.sh -m automate-install,automate-configure --automate-version ${automateVersion} -O ${orchestration.PrivateIp}:4001 -L ${automateLicense} -s https://${chefserver.PublicDnsName}/organizations/${chefOrg} -u ${userName} -f "${userFullname}" -p ${userPassword} -e ${userEmailaddress}
+          ./setup-ctl.sh -m automate-install,automate-configure --automate-version ${automateVersion} -O ${orchestration.PrivateIp}:4001 -l /tmp/automate.license -s https://${chefserver.PublicDnsName}/organizations/${chefOrg} -u ${userName} -f "${userFullname}" -p ${userPassword} -e ${userEmailaddress}
       InstanceType: c3.xlarge
       AvailabilityZone: eu-west-1b
       BlockDeviceMappings:
