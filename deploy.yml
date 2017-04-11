@@ -46,7 +46,7 @@ Parameters:
     Default: my-company
 
   automateLicense:
-    Description: gzipped and base64 encoded Automate license key
+    Description: URL to Automate license key
     Type: String
 
   # Configuration script location
