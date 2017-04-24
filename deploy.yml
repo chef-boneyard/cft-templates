@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Chef Automate Deployment Template - Version 0.1.1
+Description: Chef Automate Deployment Template - Version 0.1.2
 
 ## PARAMETERS SECTION ##
 
@@ -10,7 +10,7 @@ Parameters:
   Version:
     Description: Version of the automate-demo.json file
     Type: String
-    Default: 0.1.1
+    Default: 0.1.2
 
   # SSH keypair to inject into the instances
   KeyName:
