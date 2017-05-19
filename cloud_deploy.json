@@ -1,0 +1,7 @@
+[
+    {
+        "file": "deploy.yml",
+        "name": "Chef Automate Environment",
+        "description": "Create Chef Automate environment"
+    }
+]
